@@ -11,7 +11,7 @@ export type Pulse = {
   contextWindow: number | null
   contextPercent: number | null
   usd: number | null
-  limits: { kind: string; percentUsed: number }[]
+  limits: { kind: string; percentUsed: number; resetsAt?: string }[]
 }
 
 declare module 'claude-code' {

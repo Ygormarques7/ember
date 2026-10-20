@@ -13,13 +13,17 @@ const BAND = {
   },
 } as const
 
-test('a faixa mostra contexto, gasto e limites em todo surface', async ($, on) => {
+test('a faixa mostra sessão, semana e gasto em todo surface', async ($, on) => {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('clock.now', () => ({ value: Date.parse('2026-10-20T10:00:00Z') }))
   on('session.usage', () => ({
     value: {
       startedAt: 0,
       context: { tokens: 84_000, window: 200_000, percent: 42 },
-      rateLimits: [{ kind: 'five_hour', percentUsed: 23 }],
+      rateLimits: [
+        { kind: 'seven_day', percentUsed: 30, resetsAt: '2026-10-24T22:00:00Z' },
+        { kind: 'five_hour', percentUsed: 71, resetsAt: '2026-10-20T12:10:00Z' },
+      ],
       cost: { usd: 0.537 },
     },
   }))
@@ -30,9 +34,13 @@ test('a faixa mostra contexto, gasto e limites em todo surface', async ($, on) =
     const ui = await $.ui.mount({ ...BAND, surface })
 
     expect((await ui.find({ type: 'Text', text: /Ember/ }))?.text).toBe('Ember')
-    expect((await ui.find({ type: 'Text', text: /^42%$/ }))?.text).toBe('42%')
-    expect((await ui.find({ type: 'Text', text: /^0\.537$/ }))?.text).toBe('0.537')
-    expect((await ui.find({ type: 'Text', text: /^23%$/ }))?.text).toBe('23%')
+    expect((await ui.find({ type: 'Text', text: /^\$0\.537$/ }))?.text).toBe('$0.537')
+    expect((await ui.find({ type: 'Text', text: /^Sessão$/ }))?.text).toBe('Sessão')
+    expect((await ui.find({ type: 'Text', text: /^71%$/ }))?.text).toBe('71%')
+    expect((await ui.find({ type: 'Text', text: /^reinicia em 2h10$/ }))?.text).toBe('reinicia em 2h10')
+    expect((await ui.find({ type: 'Text', text: /^Semana$/ }))?.text).toBe('Semana')
+    expect((await ui.find({ type: 'Text', text: /^30%$/ }))?.text).toBe('30%')
+    expect((await ui.find({ type: 'Text', text: /^reinicia em 4d 12h$/ }))?.text).toBe('reinicia em 4d 12h')
     await ui.unmount()
   }
 })
@@ -70,9 +78,8 @@ test('cada resposta do modelo soma os tokens reais na faixa', async ($, on) => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
 
-    expect((await ui.find({ type: 'Text', text: /^1\.5k$/ }))?.text).toBe('1.5k')
-    expect((await ui.find({ type: 'Text', text: /^3\.4k$/ }))?.text).toBe('3.4k')
-    expect((await ui.find({ type: 'Text', text: /^50k$/ }))?.text).toBe('50k')
+    // 1200 entrada + 300 escrita de cache + 50k leitura de cache + 3400 saída
+    expect((await ui.find({ type: 'Text', text: /^55k$/ }))?.text).toBe('55k')
     await ui.unmount()
   }
 })
