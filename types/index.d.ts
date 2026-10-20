@@ -14,8 +14,14 @@ export type Pulse = {
   limits: { kind: string; percentUsed: number; resetsAt?: string }[]
 }
 
+export type MarioWalk = {
+  kind: string
+  from: number
+  isSwapped: boolean
+}
+
 declare module 'claude-code' {
   interface PluginState {
-    'ember': { pulse: Pulse }
+    'ember': { pulse: Pulse; walk: MarioWalk | null }
   }
 }

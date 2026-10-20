@@ -1,7 +1,9 @@
 {
   "name": "ember",
-  "version": "0.2.0",
-  "description": "Faixa discreta, no laranja do Claude, acima da caixa de mensagem com o gasto de tokens em tempo real",
-  "author": { "name": "Ygor Freire Marques da Costa" },
+  "version": "0.3.0",
+  "description": "Sugador de Tokens: painel preto com chuva Matrix e um Mario que troca o número a cada dezena, acima da caixa de mensagem",
+  "author": {
+    "name": "Ygor Freire Marques da Costa"
+  },
   "types": "./types/index.d.ts"
 }
