@@ -162,23 +162,28 @@ const bandWidthFor = (surface: string, columns: number) => Math.floor(columns * 
 // Abaixo disto o desenho não cabe e a faixa vira texto.
 const MIN_BAND_WIDTH = 330
 
-const MARIO_WIDTH = 16
+const MARIO_WIDTH = 18
 const SIT_HEIGHT = Math.round(spriteHeight(SIT, MARIO_WIDTH))
-// Quanto do Mario sentado desce por cima do painel: a canela e a bota.
-const MARIO_OVERLAP = 8
+// Quanto do Mario sentado desce por cima do painel: a perna inteira e a
+// bota. Quanto mais ele desce, menos espaço vazio sobra acima do painel.
+const MARIO_OVERLAP = 14
 const TOP = SIT_HEIGHT - MARIO_OVERLAP
-const PAD = 12
-const ROW_HEIGHT = 20
-const FIRST_ROW = 21
+const PAD = 14
+const ROW_HEIGHT = 26
+const FIRST_ROW = 27
+// Letra dos valores (título, números) e dos rótulos.
+const BIG = 15
+const SMALL = 12
+const BAR_H = 8
 
 const FONT = `font-family="system-ui, 'Segoe UI', sans-serif"`
 const MONO = `font-family="ui-monospace, Consolas, monospace"`
 
 // Partes de um medidor: rótulo, barra, número e "reinicia em".
-const LABEL_W = 48
-const PERCENT_W = 34
-const RESET_W = 104
-const GAP = 8
+const LABEL_W = 58
+const PERCENT_W = 40
+const RESET_W = 122
+const GAP = 10
 
 type MeterBox = { kind: string; x: number; y: number; barWidth: number; showReset: boolean }
 
@@ -201,7 +206,7 @@ const layoutFor = (width: number, kinds: string[]) => {
     showReset,
   }))
   const rows = 1 + (ordered.length === 0 ? 0 : sideBySide ? 1 : ordered.length)
-  const panelHeight = FIRST_ROW + ROW_HEIGHT * (rows - 1) + 11
+  const panelHeight = FIRST_ROW + ROW_HEIGHT * (rows - 1) + 14
   return { meters, panelHeight, height: TOP + panelHeight + 2 }
 }
 
@@ -228,7 +233,7 @@ const walkPlan = (width: number, panelHeight: number, meter: MeterBox) => {
   const numX = percentX(meter)
   const home = { x: width - 40, y: SIT_HEIGHT - walkerH }
   const ground = { x: numX + 40, y: Math.min(TOP + panelHeight - walkerH - 2, meter.y + 6 - walkerH) }
-  const onNumber = { x: numX + 4, y: meter.y - 10 - walkerH }
+  const onNumber = { x: numX + 5, y: meter.y - 12 - walkerH }
   const apexUp = { x: numX + 22, y: onNumber.y - 12 }
   const apexDown = { x: numX + 28, y: onNumber.y - 8 }
   const keys = [0, WALK.walk, WALK.up, WALK.land, WALK.leave, WALK.down, WALK.ground, WALK.end]
@@ -283,9 +288,9 @@ const meterSvg = (m: MeterBox, label: string, percent: number, reset: string | n
   const reading = (pct: number) => {
     const fill = Math.max(6, Math.round((m.barWidth * Math.min(pct, 100)) / 100))
     return (
-      `<rect x="${barX}" y="${m.y - 9}" width="${m.barWidth}" height="6" rx="3" fill="${heat(pct)}" fill-opacity="0.18"/>` +
-      `<rect x="${barX}" y="${m.y - 9}" width="${fill}" height="6" rx="3" fill="${heat(pct)}"/>` +
-      svgText(percentX(m), m.y, `${pct}%`, `font-size="13" font-weight="700" fill="${heat(pct)}"`)
+      `<rect x="${barX}" y="${m.y - 10}" width="${m.barWidth}" height="${BAR_H}" rx="4" fill="${heat(pct)}" fill-opacity="0.18"/>` +
+      `<rect x="${barX}" y="${m.y - 10}" width="${fill}" height="${BAR_H}" rx="4" fill="${heat(pct)}"/>` +
+      svgText(percentX(m), m.y, `${pct}%`, `font-size="${BIG}" font-weight="700" fill="${heat(pct)}"`)
     )
   }
   const readings = swap
@@ -293,11 +298,11 @@ const meterSvg = (m: MeterBox, label: string, percent: number, reset: string | n
       `<g display="none">${reading(swap.to)}<set attributeName="display" to="inline" begin="${secs(swap.at)}"/></g>`
     : reading(percent)
   return (
-    svgText(m.x, m.y, label, `font-size="11" fill="${C.dim}"`) +
+    svgText(m.x, m.y, label, `font-size="${SMALL}" fill="${C.dim}"`) +
     readings +
     (reset === null || !m.showReset
       ? ''
-      : svgText(percentX(m) + PERCENT_W + GAP, m.y, `reinicia em ${reset}`, `font-size="11" fill="${C.dim}"`))
+      : svgText(percentX(m) + PERCENT_W + GAP, m.y, `reinicia em ${reset}`, `font-size="${SMALL}" fill="${C.dim}"`))
   )
 }
 
@@ -321,21 +326,21 @@ const bandSvg = ({ width, tokens, usd, isWorking, limits, walking }: BandInput) 
   const name = (kind: string) => LIMIT_NAMES[kind] ?? kind
   const row1 = TOP + FIRST_ROW
   // Com pouca largura o "● sugando" sai antes de encostar no gasto.
-  const roomForStatus = W >= 470
+  const roomForStatus = W >= 520
   const body =
     `<defs>${OUTLINE_FILTER}<clipPath id="panel"><rect width="${W - 1}" height="${panelHeight}" rx="10"/></clipPath></defs>` +
     `<g transform="translate(0.5 ${TOP + 0.5})" clip-path="url(#panel)">${codeRain(W - 1, panelHeight)}</g>` +
     `<rect x="0.5" y="${TOP + 0.5}" width="${W - 1}" height="${panelHeight}" rx="10" fill="none" ` +
     `stroke="${isWorking ? C.green : C.border}"/>` +
-    svgText(PAD, row1, '>_', `font-size="13" font-weight="700" fill="${C.code}"`, MONO) +
-    svgText(PAD + 20, row1, 'Sugador de Tokens', `font-size="13" font-weight="700" fill="${C.text}"`) +
-    (isWorking && roomForStatus ? svgText(PAD + 150, row1, '● sugando', `font-size="11" fill="${C.green}"`) : '') +
-    svgText(W - (usd === null ? 52 : 144), row1, fmt(tokens), `font-size="13" font-weight="700" text-anchor="end" fill="${C.text}"`) +
-    svgText(W - (usd === null ? 48 : 140), row1, 'tokens', `font-size="11" fill="${C.dim}"`) +
+    svgText(PAD, row1, '>_', `font-size="${BIG}" font-weight="700" fill="${C.code}"`, MONO) +
+    svgText(PAD + 24, row1, 'Sugador de Tokens', `font-size="${BIG}" font-weight="700" fill="${C.text}"`) +
+    (isWorking && roomForStatus ? svgText(PAD + 172, row1, '● sugando', `font-size="${SMALL}" fill="${C.green}"`) : '') +
+    svgText(W - (usd === null ? 58 : 162), row1, fmt(tokens), `font-size="${BIG}" font-weight="700" text-anchor="end" fill="${C.text}"`) +
+    svgText(W - (usd === null ? 54 : 158), row1, 'tokens', `font-size="${SMALL}" fill="${C.dim}"`) +
     (usd === null
       ? ''
-      : svgText(W - 50, row1, usd, `font-size="13" font-weight="700" text-anchor="end" fill="${C.text}"`) +
-        svgText(W - 46, row1, 'gasto', `font-size="11" fill="${C.dim}"`)) +
+      : svgText(W - 56, row1, usd, `font-size="${BIG}" font-weight="700" text-anchor="end" fill="${C.text}"`) +
+        svgText(W - 52, row1, 'gasto', `font-size="${SMALL}" fill="${C.dim}"`)) +
     meters
       .map(m => {
         const limit = valueOf(m.kind)
