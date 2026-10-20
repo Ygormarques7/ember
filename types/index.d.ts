@@ -16,6 +16,6 @@ export type Pulse = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'token-pulse': { pulse: Pulse }
+    'ember': { pulse: Pulse }
   }
 }

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 const BAND = {
-  plugin: 'token-pulse',
+  plugin: 'ember',
   component: 'AbovePrompt',
   props: {
     hasSurvey: false,
@@ -29,7 +29,7 @@ test('a faixa mostra contexto, gasto e limites em todo surface', async ($, on) =
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
 
-    expect((await ui.find({ type: 'Text', text: /Token Pulse/ }))?.text).toBe('Token Pulse')
+    expect((await ui.find({ type: 'Text', text: /Ember/ }))?.text).toBe('Ember')
     expect((await ui.find({ type: 'Text', text: /^42%$/ }))?.text).toBe('42%')
     expect((await ui.find({ type: 'Text', text: /^0\.537$/ }))?.text).toBe('0.537')
     expect((await ui.find({ type: 'Text', text: /^23%$/ }))?.text).toBe('23%')

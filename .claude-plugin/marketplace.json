@@ -1,12 +1,12 @@
 {
-  "name": "token-pulse",
+  "name": "ember",
   "description": "Faixa acima da caixa de mensagem do Claude Code com o gasto de tokens em tempo real",
   "owner": {
     "name": "Ygor Freire Marques da Costa"
   },
   "plugins": [
     {
-      "name": "token-pulse",
+      "name": "ember",
       "source": "./"
     }
   ]

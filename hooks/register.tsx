@@ -19,7 +19,7 @@ const empty: Pulse = {
   limits: [],
 }
 
-const pulse = atom({ plugin: 'token-pulse', key: 'pulse' } as const, empty)
+const pulse = atom({ plugin: 'ember', key: 'pulse' } as const, empty)
 
 // ~4 caracteres por token: só uma estimativa enquanto a resposta chega;
 // o valor real da API substitui a estimativa quando a resposta termina.
@@ -38,8 +38,12 @@ const fmt = (n: number) => {
   return `${(n / 1_000_000).toFixed(2)}M`
 }
 
-const heat = (percent: number) =>
-  percent >= 85 ? '#f87171' : percent >= 60 ? '#fbbf24' : '#34d399'
+// Cores do tema do próprio Claude: acompanham claro/escuro sozinhas.
+// Laranja é o normal; só vira aviso/erro quando o número pede atenção.
+const heat = (percent: number) => (percent >= 85 ? 'error' : percent >= 60 ? 'warning' : 'claude')
+
+// Barra em SVG não lê o tema, então usa o laranja do Claude fixo.
+const CLAUDE_ORANGE = '#d97757'
 
 const fromUsage = (p: Pulse, u: Omit<SessionUsage, 'startedAt'>): Pulse => ({
   ...p,
@@ -50,15 +54,12 @@ const fromUsage = (p: Pulse, u: Omit<SessionUsage, 'startedAt'>): Pulse => ({
   limits: u.rateLimits.map(l => ({ kind: l.kind, percentUsed: l.percentUsed })),
 })
 
-const gradientBar = (percent: number, width: number) => {
+const meterBar = (percent: number, width: number) => {
   const fill = Math.max(6, Math.round((width * Math.min(percent, 100)) / 100))
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="8" viewBox="0 0 ${width} 8">` +
-    `<defs><linearGradient id="g" x1="0" x2="1">` +
-    `<stop offset="0" stop-color="#22d3ee"/><stop offset="0.55" stop-color="#a78bfa"/>` +
-    `<stop offset="1" stop-color="#f472b6"/></linearGradient></defs>` +
-    `<rect width="${width}" height="8" rx="4" fill="#94a3b8" fill-opacity="0.18"/>` +
-    `<rect width="${fill}" height="8" rx="4" fill="url(#g)"/></svg>`
+    `<rect width="${width}" height="8" rx="4" fill="${CLAUDE_ORANGE}" fill-opacity="0.18"/>` +
+    `<rect width="${fill}" height="8" rx="4" fill="${CLAUDE_ORANGE}"/></svg>`
   )
 }
 
@@ -161,11 +162,11 @@ export const register: Register = on => {
     const contextMeter =
       percent === null ? null : (
         <Box key="ctx" flexDirection="row" gap="xs" alignItems="center">
-          <Text color="#a78bfa" bold>
+          <Text color="claude" bold>
             ◔
           </Text>
           {svg ? (
-            <svg.Svg source={gradientBar(percent, 72)} alt={`Contexto ${percent}% usado`} width={72} height={8} />
+            <svg.Svg source={meterBar(percent, 72)} alt={`Contexto ${percent}% usado`} width={72} height={8} />
           ) : (
             <Text color={heat(percent)}>{blockBar(percent, 10)}</Text>
           )}
@@ -190,28 +191,30 @@ export const register: Register = on => {
         rowGap="xs"
         paddingX={1}
         borderStyle="round"
-        borderColor={isWorking ? '#a78bfa' : '#475569'}
+        borderColor={isWorking ? 'claude' : 'subtle'}
       >
         <Box flexDirection="row" gap="xs" alignItems="center">
-          <Text color="#c084fc" bold>
-            ✦
+          <Text color="claude" bold>
+            ✻
           </Text>
-          <Text color="#e9d5ff" weight="semibold" bold>
-            Token Pulse
+          <Text color="claude" weight="semibold" bold>
+            Ember
           </Text>
-          <Text color={isWorking ? '#34d399' : '#64748b'}>{isWorking ? '● ao vivo' : '○ ocioso'}</Text>
+          <Text color={isWorking ? 'claude' : 'inactive'} size="footnote">
+            {isWorking ? '● respondendo' : '○ ocioso'}
+          </Text>
           {isWorking && p.live > 0 ? (
-            <Text color="#fbbf24" tabular size="footnote">
-              ⚡ {Math.round(p.rate)} tok/s
+            <Text dimColor tabular size="footnote">
+              {Math.round(p.rate)} tok/s
             </Text>
           ) : null}
         </Box>
         <Box flexDirection="row" flexWrap="wrap" columnGap="md" alignItems="center">
-          {chip('in', '↑', '#22d3ee', fmt(p.input + p.cacheWrite), 'entrada')}
-          {chip('out', '↓', '#f472b6', fmt(output), 'saída')}
-          {chip('cache', '⟳', '#34d399', fmt(p.cacheRead), 'cache')}
+          {chip('in', '↑', 'claude', fmt(p.input + p.cacheWrite), 'entrada')}
+          {chip('out', '↓', 'claude', fmt(output), 'saída')}
+          {chip('cache', '⟳', 'claude', fmt(p.cacheRead), 'cache')}
           {contextMeter}
-          {p.usd === null ? null : chip('usd', '$', '#fbbf24', p.usd.toFixed(p.usd < 1 ? 3 : 2), 'gasto')}
+          {p.usd === null ? null : chip('usd', '$', 'claude', p.usd.toFixed(p.usd < 1 ? 3 : 2), 'gasto')}
           {p.limits.map(l =>
             chip(
               `limit-${l.kind}`,
