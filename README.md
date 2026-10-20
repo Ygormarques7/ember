@@ -36,7 +36,7 @@ Enquanto ele não pousa no número, a barra continua mostrando o valor antigo. U
 
 As barras ficam verdes, amarelas a partir de 60% e vermelhas a partir de 85%. Sessão e Semana só aparecem em contas com assinatura (uso por API key não tem esses limites).
 
-Funciona no **terminal** e no **app desktop**. Em telas estreitas os rótulos e o "reinicia em" somem, as barras encolhem e o Mario sai de cena. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
+Funciona no **terminal**, no **app desktop** e no **VS Code**. A faixa ocupa a largura toda e se reorganiza conforme o espaço: larga, Sessão e Semana lado a lado com o "reinicia em"; média, sem o "reinicia em"; estreita, uma embaixo da outra; muito estreita, vira texto e o Mario sai de cena. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
 
 ## Instalação
 
@@ -68,7 +68,7 @@ O código fica em `hooks/register.tsx`:
 
 - `turn.step` — lê a resposta do modelo enquanto ela chega, estima os tokens de saída ao vivo (~4 caracteres por token) e, no fim, soma os valores reais que a API devolveu;
 - `session.measure` — atualiza custo e limites (com o horário de reset) depois de cada resposta e, quando uma barra vira de dezena, começa a caminhada do Mario;
-- `ui.render` em `AbovePrompt` — desenha a faixa: no app e no VS Code como um único SVG (painel, chuva, texto, barras e Mario no mesmo sistema de coordenadas, e a troca do número acontece dentro da própria animação), no terminal em texto;
+- `ui.render` em `AbovePrompt` — desenha a faixa: no app e no VS Code como um único SVG com largura e altura explícitas (a largura vem das colunas da faixa, ~7,88 px cada), com o layout recalculado para essa largura; painel, chuva, texto, barras e Mario ficam no mesmo sistema de coordenadas e a troca do número acontece dentro da própria animação. No terminal, em texto;
 - `hooks/mario.ts` — os desenhos do Mario (sentado, em pé e no meio do passo) como grades de texto, viradas em SVG.
 
 ## Licença
