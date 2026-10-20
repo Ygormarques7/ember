@@ -1,28 +1,42 @@
-# ✻ Ember
+# >_ Sugador de Tokens
 
-Uma faixa discreta, no laranja do Claude, que fica **logo acima da caixa de mensagem do Claude Code** e mostra o gasto **em tempo real** e quanto dos seus limites já foi usado, como a página de uso do claude.ai.
+> Plugin `ember`: o nome de instalação continua o mesmo.
+
+Um painel preto, com uma chuva de caracteres verdes no estilo Matrix no fundo e um Mario sentado na borda, que fica **logo acima da caixa de mensagem do Claude Code** e mostra o gasto **em tempo real** e quanto dos seus limites já foi usado, como a página de uso do claude.ai.
 
 ```
-✻ Ember  ● respondendo  86 tok/s                       55k tokens   $0.537 gasto
+>_ Sugador de Tokens  ● sugando  86 tok/s                       55k tokens   $0.537 gasto
 Sessão ━━━━━━━━━━──── 71%  reinicia em 2h10    Semana ━━━━────────── 30%  reinicia em 4d 12h
 ```
 
-As cores vêm do tema do próprio Claude Code (`claude`, `warning`, `error`), então acompanham o modo claro e escuro.
+O painel é sempre preto, estilo terminal, só em preto, verde e branco. No terminal fica só o painel em texto, sem chuva e sem Mario.
+
+## O Mario
+
+No app desktop um Mario em pixel art fica sentado no canto de cima da faixa, com uma perna pendurada por cima do painel. Toda vez que Sessão ou Semana vira de dezena (9% → 10%, 19% → 20%, ..., 49% → 50%, ...), ele:
+
+1. sai do canto e desce andando, com os pés alternando a cada passo;
+2. pula em cima do número, e é nessa hora que o número antigo vira o novo;
+3. pula de volta para o chão e volta andando até o lugar dele.
+
+Enquanto ele não pousa no número, a barra continua mostrando o valor antigo. Uma virada dentro da mesma dezena (por exemplo, 20% → 25%) não faz ele sair do lugar.
+
+> O Mario é personagem da Nintendo; o desenho está aqui só como homenagem de fã, sem fins comerciais.
 
 ## O que aparece
 
 | Item | Significado |
 | --- | --- |
-| **● respondendo / ○ ocioso** | se o Claude está respondendo agora (a borda fica laranja enquanto trabalha) |
+| **● sugando** | aparece enquanto o Claude está respondendo (a borda acende em verde) |
 | **tok/s** | velocidade da resposta que está chegando |
-| **tokens** | total da sessão (entrada, cache e saída); fica laranja e sobe ao vivo durante a resposta, e é corrigido pelo valor real da API ao final |
+| **tokens** | total da sessão (entrada, cache e saída); fica verde e sobe ao vivo durante a resposta, e é corrigido pelo valor real da API ao final |
 | **$ gasto** | custo da sessão em dólares, igual ao `/cost`; atualiza a cada resposta da API |
 | **Sessão** | uso da janela de 5 horas da assinatura e quanto falta para reiniciar |
 | **Semana** | uso da janela de 7 dias da assinatura e quanto falta para reiniciar |
 
-As barras ficam laranja, amarelas a partir de 60% e vermelhas a partir de 85%. Sessão e Semana só aparecem em contas com assinatura (uso por API key não tem esses limites).
+As barras ficam verdes, amarelas a partir de 60% e vermelhas a partir de 85%. Sessão e Semana só aparecem em contas com assinatura (uso por API key não tem esses limites).
 
-Funciona no **terminal** e no **app desktop**. Em telas estreitas os rótulos e o "reinicia em" somem e as barras encolhem. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
+Funciona no **terminal** e no **app desktop**. Em telas estreitas os rótulos e o "reinicia em" somem, as barras encolhem e o Mario sai de cena. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
 
 ## Instalação
 
@@ -53,8 +67,9 @@ claude --plugin-dir .      # abre uma sessão com o mod carregado desta pasta
 O código fica em `hooks/register.tsx`:
 
 - `turn.step` — lê a resposta do modelo enquanto ela chega, estima os tokens de saída ao vivo (~4 caracteres por token) e, no fim, soma os valores reais que a API devolveu;
-- `session.measure` — atualiza custo e limites (com o horário de reset) depois de cada resposta;
-- `ui.render` em `AbovePrompt` — desenha a faixa.
+- `session.measure` — atualiza custo e limites (com o horário de reset) depois de cada resposta e, quando uma barra vira de dezena, começa a caminhada do Mario;
+- `ui.render` em `AbovePrompt` — desenha a faixa: no desktop em camadas de SVG com posições em pixels fixas (o texto e o palco do Mario presos à borda direita, no mesmo sistema de coordenadas), no terminal em texto;
+- `hooks/mario.ts` — os desenhos do Mario (sentado, em pé e no meio do passo) como grades de texto, viradas em SVG.
 
 ## Licença
 
