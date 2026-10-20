@@ -68,7 +68,7 @@ O código fica em `hooks/register.tsx`:
 
 - `turn.step` — lê a resposta do modelo enquanto ela chega, estima os tokens de saída ao vivo (~4 caracteres por token) e, no fim, soma os valores reais que a API devolveu;
 - `session.measure` — atualiza custo e limites (com o horário de reset) depois de cada resposta e, quando uma barra vira de dezena, começa a caminhada do Mario;
-- `ui.render` em `AbovePrompt` — desenha a faixa: no desktop em camadas de SVG com posições em pixels fixas (o texto e o palco do Mario presos à borda direita, no mesmo sistema de coordenadas), no terminal em texto;
+- `ui.render` em `AbovePrompt` — desenha a faixa: no app e no VS Code como um único SVG (painel, chuva, texto, barras e Mario no mesmo sistema de coordenadas, e a troca do número acontece dentro da própria animação), no terminal em texto;
 - `hooks/mario.ts` — os desenhos do Mario (sentado, em pé e no meio do passo) como grades de texto, viradas em SVG.
 
 ## Licença
