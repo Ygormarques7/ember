@@ -160,38 +160,43 @@ const resetIn = (resetsAt: string | undefined, now: number) => {
 const CELL_PX: Record<string, number> = { desktop: 7.88, vscode: 7.88, mobile: 7.88 }
 const bandWidthFor = (surface: string, columns: number) => Math.floor(columns * (CELL_PX[surface] ?? 7.88)) - 2
 // Abaixo disto o desenho não cabe e a faixa vira texto.
-const MIN_BAND_WIDTH = 330
+const MIN_BAND_WIDTH = 380
 
-const MARIO_WIDTH = 18
+const MARIO_WIDTH = 20
 const SIT_HEIGHT = Math.round(spriteHeight(SIT, MARIO_WIDTH))
 // Quanto do Mario sentado desce por cima do painel: a perna inteira e a
 // bota. Quanto mais ele desce, menos espaço vazio sobra acima do painel.
-const MARIO_OVERLAP = 14
+const MARIO_OVERLAP = 16
 const TOP = SIT_HEIGHT - MARIO_OVERLAP
-const PAD = 14
-const ROW_HEIGHT = 26
-const FIRST_ROW = 27
+const PAD = 16
+const ROW_HEIGHT = 30
+const FIRST_ROW = 31
 // Letra dos valores (título, números) e dos rótulos.
-const BIG = 15
-const SMALL = 12
-const BAR_H = 8
+const BIG = 17
+const SMALL = 13
+const BAR_H = 10
 
 const FONT = `font-family="system-ui, 'Segoe UI', sans-serif"`
 const MONO = `font-family="ui-monospace, Consolas, monospace"`
 
 // Partes de um medidor: rótulo, barra, número e "reinicia em".
-const LABEL_W = 58
-const PERCENT_W = 40
-const RESET_W = 122
+const LABEL_W = 66
+const PERCENT_W = 46
+const RESET_W = 134
 const GAP = 10
 
 type MeterBox = { kind: string; x: number; y: number; barWidth: number; showReset: boolean }
 
 // Onde cada coisa fica numa faixa de largura "width": as linhas, os
 // medidores (no máximo dois, Sessão e Semana) e a altura total.
+// Abaixo desta largura, tokens e gasto saem da linha do título e ganham uma
+// linha só deles, para não encostar no nome.
+const STATS_OWN_ROW_BELOW = 540
+
 const layoutFor = (width: number, kinds: string[]) => {
   const ordered = [...kinds].sort((a, b) => LIMIT_ORDER.indexOf(a) - LIMIT_ORDER.indexOf(b)).slice(0, 2)
   const inner = width - PAD * 2
+  const statsRow = width < STATS_OWN_ROW_BELOW ? 1 : 0
   // Lado a lado só se cada medidor ainda tiver uma barra de 90px.
   const sideBySide = ordered.length < 2 || inner >= 2 * (LABEL_W + 90 + PERCENT_W + GAP * 2) + 24
   const columnWidth = sideBySide && ordered.length === 2 ? (inner - 24) / 2 : inner
@@ -201,13 +206,13 @@ const layoutFor = (width: number, kinds: string[]) => {
   const meters: MeterBox[] = ordered.map((kind, i) => ({
     kind,
     x: PAD + (sideBySide ? i * (columnWidth + 24) : 0),
-    y: TOP + FIRST_ROW + ROW_HEIGHT * (sideBySide ? 1 : i + 1),
+    y: TOP + FIRST_ROW + ROW_HEIGHT * (statsRow + (sideBySide ? 1 : i + 1)),
     barWidth: barFor(showReset),
     showReset,
   }))
-  const rows = 1 + (ordered.length === 0 ? 0 : sideBySide ? 1 : ordered.length)
-  const panelHeight = FIRST_ROW + ROW_HEIGHT * (rows - 1) + 14
-  return { meters, panelHeight, height: TOP + panelHeight + 2 }
+  const rows = 1 + statsRow + (ordered.length === 0 ? 0 : sideBySide ? 1 : ordered.length)
+  const panelHeight = FIRST_ROW + ROW_HEIGHT * (rows - 1) + 16
+  return { meters, panelHeight, height: TOP + panelHeight + 2, statsOwnRow: statsRow === 1 }
 }
 
 const percentX = (m: MeterBox) => m.x + LABEL_W + m.barWidth + GAP
@@ -231,9 +236,9 @@ const WALK = (() => {
 const walkPlan = (width: number, panelHeight: number, meter: MeterBox) => {
   const walkerH = spriteHeight(STAND, MARIO_WIDTH)
   const numX = percentX(meter)
-  const home = { x: width - 40, y: SIT_HEIGHT - walkerH }
+  const home = { x: width - 44, y: SIT_HEIGHT - walkerH }
   const ground = { x: numX + 40, y: Math.min(TOP + panelHeight - walkerH - 2, meter.y + 6 - walkerH) }
-  const onNumber = { x: numX + 5, y: meter.y - 12 - walkerH }
+  const onNumber = { x: numX + 6, y: meter.y - 13 - walkerH }
   const apexUp = { x: numX + 22, y: onNumber.y - 12 }
   const apexDown = { x: numX + 28, y: onNumber.y - 8 }
   const keys = [0, WALK.walk, WALK.up, WALK.land, WALK.leave, WALK.down, WALK.ground, WALK.end]
@@ -248,7 +253,7 @@ const secs = (t: number) => `${t.toFixed(3)}s`
 // desliza parado), ele vira de frente para onde vai e segue o caminho.
 const marioLayer = (width: number, plan: ReturnType<typeof walkPlan> | null) => {
   if (plan === null) {
-    return sprite(SIT, width - 40, 0, MARIO_WIDTH)
+    return sprite(SIT, width - 44, 0, MARIO_WIDTH)
   }
   const keyTimes = plan.keys.map(k => (k / plan.tEnd).toFixed(4)).join(';')
   const values = plan.points.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(';')
@@ -288,8 +293,8 @@ const meterSvg = (m: MeterBox, label: string, percent: number, reset: string | n
   const reading = (pct: number) => {
     const fill = Math.max(6, Math.round((m.barWidth * Math.min(pct, 100)) / 100))
     return (
-      `<rect x="${barX}" y="${m.y - 10}" width="${m.barWidth}" height="${BAR_H}" rx="4" fill="${heat(pct)}" fill-opacity="0.18"/>` +
-      `<rect x="${barX}" y="${m.y - 10}" width="${fill}" height="${BAR_H}" rx="4" fill="${heat(pct)}"/>` +
+      `<rect x="${barX}" y="${m.y - 11}" width="${m.barWidth}" height="${BAR_H}" rx="5" fill="${heat(pct)}" fill-opacity="0.18"/>` +
+      `<rect x="${barX}" y="${m.y - 11}" width="${fill}" height="${BAR_H}" rx="5" fill="${heat(pct)}"/>` +
       svgText(percentX(m), m.y, `${pct}%`, `font-size="${BIG}" font-weight="700" fill="${heat(pct)}"`)
     )
   }
@@ -306,6 +311,29 @@ const meterSvg = (m: MeterBox, label: string, percent: number, reset: string | n
   )
 }
 
+// Tokens e gasto: à direita na linha do título ou, numa faixa estreita,
+// alinhados à esquerda numa linha própria.
+const statsSvg = (W: number, y: number, ownRow: boolean, tokens: number, usd: string | null) => {
+  const value = (x: number, body: string, anchor: string) =>
+    svgText(x, y, body, `font-size="${BIG}" font-weight="700" text-anchor="${anchor}" fill="${C.text}"`)
+  const label = (x: number, body: string) => svgText(x, y, body, `font-size="${SMALL}" fill="${C.dim}"`)
+  if (ownRow) {
+    const tokensText = fmt(tokens)
+    // Largura aproximada do número em negrito (~0,6 da letra por caractere).
+    const tokensEnd = PAD + Math.round(tokensText.length * BIG * 0.6)
+    return (
+      value(PAD, tokensText, 'start') +
+      label(tokensEnd + 4, 'tokens') +
+      (usd === null ? '' : value(tokensEnd + 70, usd, 'start') + label(tokensEnd + 74 + Math.round(usd.length * BIG * 0.6), 'gasto'))
+    )
+  }
+  return (
+    value(W - (usd === null ? 64 : 182), fmt(tokens), 'end') +
+    label(W - (usd === null ? 60 : 178), 'tokens') +
+    (usd === null ? '' : value(W - 62, usd, 'end') + label(W - 58, 'gasto'))
+  )
+}
+
 type BandInput = {
   width: number
   tokens: number
@@ -319,28 +347,23 @@ type BandInput = {
 // alternativo que diz o que ele mostra.
 const bandSvg = ({ width, tokens, usd, isWorking, limits, walking }: BandInput) => {
   const W = Math.round(width)
-  const { meters, panelHeight, height } = layoutFor(W, limits.map(l => l.kind))
+  const { meters, panelHeight, height, statsOwnRow } = layoutFor(W, limits.map(l => l.kind))
   const valueOf = (kind: string) => limits.find(l => l.kind === kind)
   const target = walking === null ? undefined : meters.find(m => m.kind === walking.kind)
   const plan = target ? walkPlan(W, panelHeight, target) : null
   const name = (kind: string) => LIMIT_NAMES[kind] ?? kind
   const row1 = TOP + FIRST_ROW
   // Com pouca largura o "● sugando" sai antes de encostar no gasto.
-  const roomForStatus = W >= 520
+  const roomForStatus = W >= 600
   const body =
     `<defs>${OUTLINE_FILTER}<clipPath id="panel"><rect width="${W - 1}" height="${panelHeight}" rx="10"/></clipPath></defs>` +
     `<g transform="translate(0.5 ${TOP + 0.5})" clip-path="url(#panel)">${codeRain(W - 1, panelHeight)}</g>` +
     `<rect x="0.5" y="${TOP + 0.5}" width="${W - 1}" height="${panelHeight}" rx="10" fill="none" ` +
     `stroke="${isWorking ? C.green : C.border}"/>` +
     svgText(PAD, row1, '>_', `font-size="${BIG}" font-weight="700" fill="${C.code}"`, MONO) +
-    svgText(PAD + 24, row1, 'Sugador de Tokens', `font-size="${BIG}" font-weight="700" fill="${C.text}"`) +
-    (isWorking && roomForStatus ? svgText(PAD + 172, row1, '● sugando', `font-size="${SMALL}" fill="${C.green}"`) : '') +
-    svgText(W - (usd === null ? 58 : 162), row1, fmt(tokens), `font-size="${BIG}" font-weight="700" text-anchor="end" fill="${C.text}"`) +
-    svgText(W - (usd === null ? 54 : 158), row1, 'tokens', `font-size="${SMALL}" fill="${C.dim}"`) +
-    (usd === null
-      ? ''
-      : svgText(W - 56, row1, usd, `font-size="${BIG}" font-weight="700" text-anchor="end" fill="${C.text}"`) +
-        svgText(W - 52, row1, 'gasto', `font-size="${SMALL}" fill="${C.dim}"`)) +
+    svgText(PAD + 27, row1, 'Sugador de Tokens', `font-size="${BIG}" font-weight="700" fill="${C.text}"`) +
+    (isWorking && roomForStatus ? svgText(PAD + 196, row1, '● sugando', `font-size="${SMALL}" fill="${C.green}"`) : '') +
+    statsSvg(W, statsOwnRow ? row1 + ROW_HEIGHT : row1, statsOwnRow, tokens, usd) +
     meters
       .map(m => {
         const limit = valueOf(m.kind)
