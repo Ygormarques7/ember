@@ -1,12 +1,10 @@
 # ✻ Ember
 
-Uma faixa discreta, no laranja do Claude, que fica **logo acima da caixa de mensagem do Claude Code** e mostra o gasto de tokens **em tempo real**.
+Uma faixa discreta, no laranja do Claude, que fica **logo acima da caixa de mensagem do Claude Code** e mostra o gasto **em tempo real** e quanto dos seus limites já foi usado, como a página de uso do claude.ai.
 
 ```
-╭──────────────────────────────────────────────────────────────────────────────────────────╮
-│ ✻ Ember ● respondendo 86 tok/s         ↑ 12.4k entrada  ↓ 3.1k saída  ⟳ 184k cache        │
-│                                        ◔ ████░░░░░░ 42% contexto  $ 0.537 gasto  ◷ 23% 5h │
-╰──────────────────────────────────────────────────────────────────────────────────────────╯
+✻ Ember  ● respondendo  86 tok/s                       55k tokens   $0.537 gasto
+Sessão ━━━━━━━━━━──── 71%  reinicia em 2h10    Semana ━━━━────────── 30%  reinicia em 4d 12h
 ```
 
 As cores vêm do tema do próprio Claude Code (`claude`, `warning`, `error`), então acompanham o modo claro e escuro.
@@ -17,14 +15,14 @@ As cores vêm do tema do próprio Claude Code (`claude`, `warning`, `error`), en
 | --- | --- |
 | **● respondendo / ○ ocioso** | se o Claude está respondendo agora (a borda fica laranja enquanto trabalha) |
 | **tok/s** | velocidade da resposta que está chegando |
-| **↑ entrada** | tokens enviados ao modelo (inclui escrita de cache) |
-| **↓ saída** | tokens gerados — sobe ao vivo durante a resposta e é corrigido pelo valor real da API ao final |
-| **⟳ cache** | tokens lidos do cache de prompt (mais baratos) |
-| **◔ contexto** | quanto da janela de contexto está ocupada (laranja normal; amarelo a partir de 60% e vermelho a partir de 85%) |
-| **$ gasto** | custo da sessão em dólares, igual ao `/cost` |
-| **◷ 5h / 7d** | uso das janelas de limite da assinatura |
+| **tokens** | total da sessão (entrada, cache e saída); fica laranja e sobe ao vivo durante a resposta, e é corrigido pelo valor real da API ao final |
+| **$ gasto** | custo da sessão em dólares, igual ao `/cost`; atualiza a cada resposta da API |
+| **Sessão** | uso da janela de 5 horas da assinatura e quanto falta para reiniciar |
+| **Semana** | uso da janela de 7 dias da assinatura e quanto falta para reiniciar |
 
-Funciona no **terminal** e no **app desktop**. Em telas estreitas os rótulos somem e só ficam ícones e números. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
+As barras ficam laranja, amarelas a partir de 60% e vermelhas a partir de 85%. Sessão e Semana só aparecem em contas com assinatura (uso por API key não tem esses limites).
+
+Funciona no **terminal** e no **app desktop**. Em telas estreitas os rótulos e o "reinicia em" somem e as barras encolhem. Para recolher a faixa, clique no `[-]` à direita dela (ou `ctrl+x ctrl+a`).
 
 ## Instalação
 
@@ -55,7 +53,7 @@ claude --plugin-dir .      # abre uma sessão com o mod carregado desta pasta
 O código fica em `hooks/register.tsx`:
 
 - `turn.step` — lê a resposta do modelo enquanto ela chega, estima os tokens de saída ao vivo (~4 caracteres por token) e, no fim, soma os valores reais que a API devolveu;
-- `session.measure` — atualiza contexto, custo e limites depois de cada turno;
+- `session.measure` — atualiza custo e limites (com o horário de reset) depois de cada resposta;
 - `ui.render` em `AbovePrompt` — desenha a faixa.
 
 ## Licença
