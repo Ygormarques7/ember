@@ -154,10 +154,13 @@ const resetIn = (resetsAt: string | undefined, now: number) => {
 // O SVG só muda quando muda o que ele mostra, e a troca do número durante a
 // caminhada acontece dentro da própria animação, para ela nunca reiniciar.
 
-// Pixels por coluna da faixa em cada superfície. No app, medido: 95 colunas
-// ocupam 749px dentro do quadro cinza da faixa (7,88px cada). A largura sai
-// arredondada para baixo e com 2px de folga para nunca passar da borda.
-const CELL_PX: Record<string, number> = { desktop: 7.88, vscode: 7.88, mobile: 7.88 }
+// Pixels por coluna da faixa em cada superfície. A superfície conta as
+// colunas dividindo a largura da faixa pela largura de um "0" na fonte dela,
+// então cada uma tem o seu valor. Medido nos prints: no app, 95 colunas
+// ocupam 749px (7,88px cada); no VS Code, cuja fonte é maior, ~9,45px (usa
+// 9,35 por folga). A largura sai arredondada para baixo, com 2px de folga,
+// para nunca passar da borda.
+const CELL_PX: Record<string, number> = { desktop: 7.88, vscode: 9.35, mobile: 7.88 }
 const bandWidthFor = (surface: string, columns: number) => Math.floor(columns * (CELL_PX[surface] ?? 7.88)) - 2
 // Abaixo disto o desenho não cabe e a faixa vira texto.
 const MIN_BAND_WIDTH = 380
