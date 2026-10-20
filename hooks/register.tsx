@@ -139,27 +139,27 @@ const resetIn = (resetsAt: string | undefined, now: number) => {
   return `${mins}min`
 }
 
-// No desktop a faixa é desenhada em camadas de SVG com posições em pixels
-// conhecidas, para o Mario saber o caminho exato do topo até cada número:
-// um espaço acima do painel (onde o Mario fica sentado), o painel com a
-// chuva, e por cima o texto e o palco do Mario. O texto da direita e o palco
-// ficam presos à borda direita da faixa, com a mesma largura, então o número
-// e o Mario vivem no mesmo sistema de coordenadas.
+// No desktop (app e VS Code) a faixa inteira é UM SVG em fluxo normal, sem
+// nada sobreposto por posição absoluta (o VS Code empilha o que é absoluto e
+// o app corta o que passa da altura): um espaço no topo onde o Mario fica
+// sentado, o painel com borda e chuva, o texto e o Mario. Tudo no mesmo
+// sistema de coordenadas, então o Mario sabe o caminho exato até cada número.
+// O SVG só muda quando muda o texto mostrado, e a troca do número durante a
+// caminhada acontece dentro da própria animação, para ela nunca reiniciar.
+const BAND_WIDTH = 620
 const MARIO_WIDTH = 16
 const SIT_HEIGHT = Math.round(spriteHeight(SIT, MARIO_WIDTH))
 // Quanto do Mario sentado desce por cima do painel: a canela e a bota.
 const MARIO_OVERLAP = 8
 const TOP = SIT_HEIGHT - MARIO_OVERLAP
 const PANEL_HEIGHT = 50
-const STAGE_HEIGHT = TOP + PANEL_HEIGHT + 4
+const BAND_HEIGHT = TOP + PANEL_HEIGHT + 2
 const ROW1_Y = TOP + 21
 const ROW2_Y = TOP + 41
-const RIGHT_WIDTH = 580
-const LEFT_WIDTH = 330
 // Onde o Mario fica sentado: no canto direito, em cima da borda.
-const HOME_X = RIGHT_WIDTH - 40
-// Onde começa cada medidor (Sessão, Semana) no SVG da direita.
-const METER_X = [RIGHT_WIDTH - 570, RIGHT_WIDTH - 290]
+const HOME_X = BAND_WIDTH - 40
+// Onde começa cada medidor (Sessão, Semana).
+const METER_X = [12, 316]
 // Dentro de cada medidor: rótulo, barra, número e "reinicia em".
 const BAR_DX = 48
 const BAR_WIDTH = 90
@@ -167,12 +167,7 @@ const PERCENT_DX = 146
 const RESET_DX = 178
 
 const FONT = `font-family="system-ui, 'Segoe UI', sans-serif"`
-
-const svgDoc = (width: number, height: number, body: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${body}</svg>`
-
-const SPACER = svgDoc(1, TOP, '')
-const PANEL_SIZER = svgDoc(1, PANEL_HEIGHT, '')
+const MONO = `font-family="ui-monospace, Consolas, monospace"`
 
 // Quais barras aparecem e onde: no máximo duas, na ordem Sessão, Semana.
 const meterSlots = (kinds: string[]) =>
@@ -212,14 +207,12 @@ const walkPlan = (meterX: number) => {
 
 const secs = (t: number) => `${t.toFixed(3)}s`
 
-// O palco do Mario. Parado: sentado no canto, com a perna sobre o painel.
-// Andando: os pés alternam entre o passo fechado e o aberto enquanto ele
-// anda (nunca desliza parado), ele vira de frente para onde vai e segue o
-// caminho do plano.
-const marioStage = (walkingAt: number | null) => {
-  const defs = `<defs>${OUTLINE_FILTER}</defs>`
+// O Mario. Parado: sentado no canto, com a perna sobre o painel. Andando:
+// os pés alternam entre o passo fechado e o aberto enquanto ele anda (nunca
+// desliza parado), ele vira de frente para onde vai e segue o caminho.
+const marioLayer = (walkingAt: number | null) => {
   if (walkingAt === null) {
-    return svgDoc(RIGHT_WIDTH, STAGE_HEIGHT, defs + sprite(SIT, HOME_X, 0, MARIO_WIDTH))
+    return sprite(SIT, HOME_X, 0, MARIO_WIDTH)
   }
   const plan = walkPlan(walkingAt)
   const keyTimes = plan.keys.map(k => (k / plan.tEnd).toFixed(4)).join(';')
@@ -238,35 +231,96 @@ const marioStage = (walkingAt: number | null) => {
   const frames =
     `<g>${walking(true)}${sprite(STAND, 0, 0, MARIO_WIDTH)}</g>` +
     `<g visibility="hidden">${walking(false)}${sprite(STRIDE, 0, 0, MARIO_WIDTH)}</g>`
-  return svgDoc(
-    RIGHT_WIDTH,
-    STAGE_HEIGHT,
-    defs +
-      `<g><animateTransform attributeName="transform" type="translate" values="${values}" ` +
-      `keyTimes="${keyTimes}" dur="${secs(plan.tEnd)}" fill="freeze"/>` +
-      // Indo: de frente para a esquerda, como o desenho. Voltando: espelhado.
-      `<g><set attributeName="display" to="none" begin="${secs(plan.tGround)}"/>${frames}</g>` +
-      `<g display="none"><set attributeName="display" to="inline" begin="${secs(plan.tGround)}"/>` +
-      `<g transform="translate(${MARIO_WIDTH} 0) scale(-1 1)">${frames}</g></g>` +
-      `</g>`,
-  )
-}
-
-// Barra de uso dentro do SVG do texto, com fundo apagado e preenchimento.
-const meterRect = (x: number, percent: number, width: number) => {
-  const color = heat(percent)
-  const fill = Math.max(6, Math.round((width * Math.min(percent, 100)) / 100))
-  const y = ROW2_Y - 9
   return (
-    `<rect x="${x}" y="${y}" width="${width}" height="6" rx="3" fill="${color}" fill-opacity="0.18"/>` +
-    `<rect x="${x}" y="${y}" width="${fill}" height="6" rx="3" fill="${color}"/>`
+    `<g><animateTransform attributeName="transform" type="translate" values="${values}" ` +
+    `keyTimes="${keyTimes}" dur="${secs(plan.tEnd)}" fill="freeze"/>` +
+    // Indo: de frente para a esquerda, como o desenho. Voltando: espelhado.
+    `<g><set attributeName="display" to="none" begin="${secs(plan.tGround)}"/>${frames}</g>` +
+    `<g display="none"><set attributeName="display" to="inline" begin="${secs(plan.tGround)}"/>` +
+    `<g transform="translate(${MARIO_WIDTH} 0) scale(-1 1)">${frames}</g></g>` +
+    `</g>`
   )
 }
-
-const MONO = `font-family="ui-monospace, Consolas, monospace"`
 
 const svgText = (x: number, y: number, body: string, attrs: string, font = FONT) =>
   `<text x="${x}" y="${y}" ${font} ${attrs}>${escapeXml(body)}</text>`
+
+// Barra e número de um medidor. Com "swap", é o medidor que o Mario vai
+// trocar: mostra o valor antigo até ele pousar (swap.at segundos depois do
+// começo da caminhada) e o novo dali em diante, tudo dentro da animação.
+const meterSvg = (x: number, label: string, percent: number, reset: string | null, swap?: { to: number; at: number }) => {
+  const reading = (pct: number) => {
+    const fill = Math.max(6, Math.round((BAR_WIDTH * Math.min(pct, 100)) / 100))
+    return (
+      `<rect x="${x + BAR_DX}" y="${ROW2_Y - 9}" width="${BAR_WIDTH}" height="6" rx="3" fill="${heat(pct)}" fill-opacity="0.18"/>` +
+      `<rect x="${x + BAR_DX}" y="${ROW2_Y - 9}" width="${fill}" height="6" rx="3" fill="${heat(pct)}"/>` +
+      svgText(x + PERCENT_DX, ROW2_Y, `${pct}%`, `font-size="13" font-weight="700" fill="${heat(pct)}"`)
+    )
+  }
+  const readings = swap
+    ? `<g>${reading(percent)}<set attributeName="display" to="none" begin="${secs(swap.at)}"/></g>` +
+      `<g display="none">${reading(swap.to)}<set attributeName="display" to="inline" begin="${secs(swap.at)}"/></g>`
+    : reading(percent)
+  return (
+    svgText(x, ROW2_Y, label, `font-size="11" fill="${C.dim}"`) +
+    readings +
+    (reset === null ? '' : svgText(x + RESET_DX, ROW2_Y, `reinicia em ${reset}`, `font-size="11" fill="${C.dim}"`))
+  )
+}
+
+type BandInput = {
+  tokens: number
+  usd: string | null
+  isWorking: boolean
+  limits: { kind: string; percent: number; reset: string | null }[]
+  walking: { kind: string; from: number } | null
+}
+
+// A faixa do desktop: o SVG e o texto alternativo que diz o que ele mostra.
+const bandSvg = ({ tokens, usd, isWorking, limits, walking }: BandInput) => {
+  const meters = meterSlots(limits.map(l => l.kind)).flatMap(slot => {
+    const l = limits.find(m => m.kind === slot.kind)
+    return l ? [{ ...slot, percent: l.percent, reset: l.reset }] : []
+  })
+  const target = walking === null ? undefined : meters.find(m => m.kind === walking.kind)
+  const plan = target ? walkPlan(target.x) : null
+  const name = (kind: string) => LIMIT_NAMES[kind] ?? kind
+  const W = BAND_WIDTH
+  const body =
+    `<defs>${OUTLINE_FILTER}<clipPath id="panel"><rect width="${W - 1}" height="${PANEL_HEIGHT}" rx="10"/></clipPath></defs>` +
+    `<g transform="translate(0.5 ${TOP + 0.5})" clip-path="url(#panel)">${codeRain(W - 1, PANEL_HEIGHT)}</g>` +
+    `<rect x="0.5" y="${TOP + 0.5}" width="${W - 1}" height="${PANEL_HEIGHT}" rx="10" fill="none" ` +
+    `stroke="${isWorking ? C.green : C.border}"/>` +
+    svgText(12, ROW1_Y, '>_', `font-size="13" font-weight="700" fill="${C.code}"`, MONO) +
+    svgText(32, ROW1_Y, 'Sugador de Tokens', `font-size="13" font-weight="700" fill="${C.text}"`) +
+    (isWorking ? svgText(162, ROW1_Y, '● sugando', `font-size="11" fill="${C.green}"`) : '') +
+    svgText(W - 144, ROW1_Y, fmt(tokens), `font-size="13" font-weight="700" text-anchor="end" fill="${C.text}"`) +
+    svgText(W - 140, ROW1_Y, 'tokens', `font-size="11" fill="${C.dim}"`) +
+    (usd === null
+      ? ''
+      : svgText(W - 50, ROW1_Y, usd, `font-size="13" font-weight="700" text-anchor="end" fill="${C.text}"`) +
+        svgText(W - 46, ROW1_Y, 'gasto', `font-size="11" fill="${C.dim}"`)) +
+    meters
+      .map(m =>
+        m === target && walking !== null && plan !== null
+          ? meterSvg(m.x, name(m.kind), walking.from, m.reset, { to: m.percent, at: plan.tLand })
+          : meterSvg(m.x, name(m.kind), m.percent, m.reset),
+      )
+      .join('') +
+    marioLayer(target ? target.x : null)
+  const alt = [
+    `Sugador de Tokens${isWorking ? ', sugando' : ''}`,
+    `${fmt(tokens)} tokens`,
+    ...(usd === null ? [] : [`${usd} gasto`]),
+    ...meters.map(m => {
+      const value = m === target && walking !== null ? `${walking.from}% → ${m.percent}%` : `${m.percent}%`
+      return `${name(m.kind)} ${value}${m.reset === null ? '' : ` (reinicia em ${m.reset})`}`
+    }),
+    target ? 'Mario indo trocar o número' : 'Mario sentado na borda',
+  ].join(', ')
+  const source = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${BAND_HEIGHT}" viewBox="0 0 ${W} ${BAND_HEIGHT}">${body}</svg>`
+  return { source, alt }
+}
 
 const fromUsage = (p: Pulse, u: Omit<SessionUsage, 'startedAt'>): Pulse => ({
   ...p,
@@ -393,76 +447,18 @@ export const register: Register = on => {
     const live = isWorking && p.live > 0
     const usd = p.usd === null ? null : `$${p.usd.toFixed(p.usd < 1 ? 3 : 2)}`
 
-    // Desktop: camadas de SVG com posições em pixels (veja o comentário de TOP),
-    // e o Mario sentado na borda ou fazendo a caminhada.
+    // Desktop: a faixa inteira num SVG só (veja o comentário de BAND_WIDTH).
     if (svg && !isNarrow) {
-      const meters = meterSlots(limits.map(l => l.kind)).flatMap(slot => {
-        const l = limits.find(m => m.kind === slot.kind)
-        return l ? [{ ...slot, shown: shownPercent(l), reset: resetIn(l.resetsAt, now) }] : []
+      const band = bandSvg({
+        tokens,
+        usd,
+        isWorking,
+        limits: limits.map(l => ({ kind: l.kind, percent: l.percentUsed, reset: resetIn(l.resetsAt, now) })),
+        walking: walking === null ? null : { kind: walking.kind, from: walking.from },
       })
-      const left =
-        svgText(12, ROW1_Y, '>_', `font-size="13" font-weight="700" fill="${C.code}"`, MONO) +
-        svgText(32, ROW1_Y, 'Sugador de Tokens', `font-size="13" font-weight="700" fill="${C.text}"`) +
-        (isWorking ? svgText(162, ROW1_Y, '● sugando', `font-size="11" fill="${C.green}"`) : '') +
-        (live ? svgText(226, ROW1_Y, `${Math.round(p.rate)} tok/s`, `font-size="11" fill="${C.dim}"`) : '')
-      const right =
-        svgText(RIGHT_WIDTH - 154, ROW1_Y, fmt(tokens), `font-size="13" font-weight="700" text-anchor="end" fill="${live ? C.green : C.text}"`) +
-        svgText(RIGHT_WIDTH - 150, ROW1_Y, 'tokens', `font-size="11" fill="${C.dim}"`) +
-        (usd === null
-          ? ''
-          : svgText(RIGHT_WIDTH - 54, ROW1_Y, usd, `font-size="13" font-weight="700" text-anchor="end" fill="${C.text}"`) +
-            svgText(RIGHT_WIDTH - 50, ROW1_Y, 'gasto', `font-size="11" fill="${C.dim}"`)) +
-        meters
-          .map(
-            m =>
-              svgText(m.x, ROW2_Y, LIMIT_NAMES[m.kind] ?? m.kind, `font-size="11" fill="${C.dim}"`) +
-              meterRect(m.x + BAR_DX, m.shown, BAR_WIDTH) +
-              svgText(m.x + PERCENT_DX, ROW2_Y, `${m.shown}%`, `font-size="13" font-weight="700" fill="${heat(m.shown)}"`) +
-              (m.reset === null ? '' : svgText(m.x + RESET_DX, ROW2_Y, `reinicia em ${m.reset}`, `font-size="11" fill="${C.dim}"`)),
-          )
-          .join('')
-      const summary = [
-        `${fmt(tokens)} tokens`,
-        ...(usd === null ? [] : [`${usd} gasto`]),
-        ...meters.map(m => `${LIMIT_NAMES[m.kind] ?? m.kind} ${m.shown}%${m.reset === null ? '' : ` (reinicia em ${m.reset})`}`),
-      ].join(', ')
-      const walkingAt = walking === null ? null : (meters.find(m => m.kind === walking.kind)?.x ?? null)
-
       return (
-        <Box flexDirection="column" position="relative">
-          <svg.Svg source={SPACER} alt="" width={1} height={TOP} />
-          <Box
-            position="relative"
-            overflow="hidden"
-            borderStyle="round"
-            borderColor={isWorking ? C.green : C.border}
-            backgroundColor={C.bg}
-          >
-            <Box key="rain" position="absolute" top={0} left={0} right={0} bottom={0}>
-              <svg.Svg source={codeRain(1600, 72)} alt="" height={72} isInteractive />
-            </Box>
-            <svg.Svg source={PANEL_SIZER} alt="" width={1} height={PANEL_HEIGHT} />
-          </Box>
-          <Box position="absolute" top={0} left={0}>
-            <svg.Svg
-              source={svgDoc(LEFT_WIDTH, STAGE_HEIGHT, left)}
-              alt={isWorking ? 'Sugador de Tokens, sugando' : 'Sugador de Tokens'}
-              width={LEFT_WIDTH}
-              height={STAGE_HEIGHT}
-            />
-          </Box>
-          <Box position="absolute" top={0} right={0}>
-            <svg.Svg source={svgDoc(RIGHT_WIDTH, STAGE_HEIGHT, right)} alt={summary} width={RIGHT_WIDTH} height={STAGE_HEIGHT} />
-          </Box>
-          <Box position="absolute" top={0} right={0}>
-            <svg.Svg
-              source={marioStage(walkingAt)}
-              alt={walkingAt === null ? 'Mario sentado na borda' : 'Mario indo trocar o número'}
-              width={RIGHT_WIDTH}
-              height={STAGE_HEIGHT}
-              isInteractive
-            />
-          </Box>
+        <Box>
+          <svg.Svg source={band.source} alt={band.alt} isInteractive />
         </Box>
       )
     }

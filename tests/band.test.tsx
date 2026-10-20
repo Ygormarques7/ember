@@ -115,19 +115,21 @@ test('ao virar de dezena (49 → 50) o Mario vai até o número, troca e volta',
   const clock = await crossing($, on, 'five_hour', 49, 50)
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
-  // Ele sai de cima e, enquanto anda, a barra ainda mostra 49%.
+  // Ele sai de cima; no desktop a troca 49% → 50% acontece dentro da
+  // animação, no pouso, sem redesenhar a faixa no meio do caminho.
   expect(await altWith(ui, 'Mario indo trocar o número')).toBeDefined()
-  await clock.advance(1000)
-  expect(await altWith(ui, ' tokens')).toContain('Sessão 49%')
-
-  // Pousou no número: virou 50%. Depois volta a sentar na borda.
+  expect(await altWith(ui, ' tokens')).toContain('Sessão 49% → 50%')
+  const during = (await ui.findAll({ type: 'Svg' }))[0]?.props.source
   await clock.advance(5000)
-  expect(await altWith(ui, ' tokens')).toContain('Sessão 50%')
-  await clock.advance(10_000)
+  expect((await ui.findAll({ type: 'Svg' }))[0]?.props.source).toBe(during)
+
+  // Terminado o passeio, ele volta a sentar na borda e a barra fica em 50%.
+  await clock.advance(15_000)
   expect(await altWith(ui, 'Mario sentado na borda')).toBeDefined()
+  expect(await altWith(ui, ' tokens')).toContain('Sessão 50%')
   await ui.unmount()
 
-  // No terminal não há Mario; o número só troca na hora do pouso.
+  // No terminal não há Mario; o número troca na hora do pouso.
   const term = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect((await term.find({ type: 'Text', text: /^50%$/ }))?.text).toBe('50%')
   await term.unmount()
